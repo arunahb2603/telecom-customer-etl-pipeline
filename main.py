@@ -1,0 +1,1 @@
+print("Telecom ETL Pipeline Project Started")
