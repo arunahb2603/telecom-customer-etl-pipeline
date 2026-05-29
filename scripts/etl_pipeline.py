@@ -1,9 +1,11 @@
 import pandas as pd
 import logging
 import time
+import boto3
 from config import INPUT_PATH, OUTPUT_PATH, DB_USER, DB_PASSWORD,DB_HOST, DB_PORT, DB_NAME, ENVIRONMENT
 from datetime import datetime
 from sqlalchemy import create_engine
+from aws_config import BUCKET_NAME
 logging.basicConfig(
     filename="../logs/pipeline.log",
     level=logging.INFO,
@@ -14,6 +16,7 @@ engine = create_engine(
 ) 
 logging.info(f"Running pipeline in {ENVIRONMENT} environment") 
 
+s3_client = boto3.client("s3")
  #read csv file 
   
 try:
@@ -107,6 +110,14 @@ try:
             if_exists="replace",
             index=False)
         logging.info("Data loaded to SQL successfully")
+    def upload_to_s3():
+        logging.info("Uploading file to S3...")
+        timestamp = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
+        s3_client.upload_file(
+            OUTPUT_PATH,
+            BUCKET_NAME,
+            f"processed_telecom_data_{timestamp}.csv")
+        logging.info("File uploaded to S3 successfully")
   #-----------main------------------
     def main():
         df=extract_data()
@@ -115,6 +126,7 @@ try:
         logging.info(df.describe().to_string())
         load_data(df)
         load_to_postgres(df)
+        upload_to_s3()
         print("ETL pipeline completed successfully...")
         
     if __name__ == "__main__":
